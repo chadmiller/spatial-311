@@ -1,0 +1,37 @@
+#!/bin/bash -eu
+
+mkdir -p data
+
+database=spatial-info
+table=world
+geometry_table=region
+owner=$(whoami)
+
+sudo -u postgres createuser $owner || true
+sudo -u postgres dropdb $database || true
+sudo -u postgres createdb -O $owner $database
+
+sudo -u postgres psql -d $database -c "CREATE EXTENSION postgis;"
+sudo -u postgres psql -d $database -c "CREATE EXTENSION postgis_topology;"
+sudo -u postgres psql -d $database -c "CREATE EXTENSION address_standardizer;"
+sudo -u postgres psql -d $database -c "ALTER SCHEMA topology OWNER TO $owner;"
+
+function download-and-extract () {
+	description=$1
+	url=$2
+	t=$(mktemp -d)
+	wget -nv -O $t/download.zip $url
+	(cd $t && unzip download.zip; )
+
+	shp2pgkeyval $t/*.shp "data/$description.psql" world region regiontags key value
+
+	rm -rf $t
+	rm $shp
+}
+
+psql -e $database -f schema.psql
+
+download-and-extract "City of Orlando yard waste pickup days" 'https://data.cityoforlando.net/api/geospatial/w6u7-pfy5?method=export&format=Shapefile'
+download-and-extract "City of Orlando garbage collection days" 'https://data.cityoforlando.net/api/geospatial/2ghq-vezc?method=export&format=Shapefile'
+download-and-extract "City of Orlando recycling collection days" 'https://data.cityoforlando.net/api/geospatial/7gga-penv?method=export&format=Shapefile'
+

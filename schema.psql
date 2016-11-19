@@ -1,0 +1,25 @@
+create table layer (
+	pk serial primary key,
+	name varchar(50) unique not null
+);
+
+create table import (
+	pk serial primary key,
+	imported_at timestamp not null default 'now',
+	layer integer references layer (pk)
+);
+
+create table world (
+	pk serial primary key, 
+	note_markdown varchar(5000),
+	import integer references import (pk)
+);
+
+create table regiontags (
+	pk serial primary key, 
+	key text not null, 
+	value text, 
+	region integer references world (pk)
+);	
+
+select AddGeometryColumn('world','region','0','MULTIPOLYGON',2);
