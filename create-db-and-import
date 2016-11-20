@@ -1,5 +1,6 @@
 #!/bin/bash -eu
 
+rm -rf data
 mkdir -p data
 
 database=spatial-info
@@ -22,11 +23,9 @@ function download-and-extract () {
 	t=$(mktemp -d)
 	wget -nv -O $t/download.zip $url
 	(cd $t && unzip download.zip; )
-
-	shp2pgkeyval $t/*.shp "data/$description.psql" world region regiontags key value
-
+	./shp2pgkeyval $t/*.shp "data/$description.psql" note_markdown "$description" world region pk regiontags key value region
+	psql -e $database -f "data/$description.psql"
 	rm -rf $t
-	rm $shp
 }
 
 psql -e $database -f schema.psql

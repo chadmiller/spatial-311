@@ -5,17 +5,37 @@ import tempfile
 import re
 import sys
 
-_, shapefile, outfile, geo_table, geo_column, keyval_table, keyval_table_key, keyval_table_val = sys.argv
+_, shapefile, outfile, import_column, import_name, geo_table, geo_column, geo_pk, keyval_table, keyval_table_key, keyval_table_val, keyval_table_link = sys.argv
 
-shpconv = subprocess.run(["shp2pgsql", "-a ", shapefile, "tablename"], stdout=subprocess.PIPE, check=True, universal_newlines=True)
+assert '"' not in import_column
+assert '"' not in import_name
+assert '"' not in geo_table
+assert '"' not in geo_column
+assert '"' not in keyval_table
+assert '"' not in keyval_table_key
+assert '"' not in keyval_table_val
+
+shpconv = subprocess.run(["shp2pgsql", "-a", shapefile, "tablename"], stdout=subprocess.PIPE, check=True, universal_newlines=True)
 
 with open(outfile, "w") as out:
-    for line in shpconv.stdout:
-        print(line)
+    out.write("BEGIN;\n")
+    for line in shpconv.stdout.split("\n"):
+        if line.startswith("INSERT "):
+            m = re.match(r"""INSERT INTO "tablename" \((.*?)\) VALUES \((.*)\);$""", line)
+            if m:
+                keys = m.group(1).split(",")
+                vals = m.group(2).split(",")
 
+                d = dict(zip(keys, vals))
 
-"""
-INSERT INTO "world" ("color","garbageday","garbagert",geom) VALUES ('R','Monday & Thursday','A15','010600000001000000010300000001000000150000006B4589DEC55B54C0EAEA59D088903C40AA44A7D58D5B54C07DC1B2AE87903C40DD70E6B48D5B54C07AB262ED09903C40EF34E02E8E5B54C0E32D53B0DB8F3C40D1F2A09F6B5B54C0FF4C34FADD8F3C4048E18E7D6A5B54C0D664F3EC888F3C400401370C8D5B54C0982833C9848F3C405525460A8E5B54C02E23DF254F8F3C40E70C32F56A5B54C0C64FEB6F518F3C40B7BA55326A5B54C002EA7E96668E3C40A9751AC18C5B54C0DFBEA84C648E3C4044C6D886F65B54C0F15EA2F2628E3C409A3D451CFC5B54C0E9731773B38F3C40366BF754DE5B54C0A0070869F68F3C40BF1F4CA6CF5B54C04CE4B51AE48F3C405CC92F87CF5B54C029DB7ABF6D8F3C40FC1963148E5B54C0028724FB758F3C405A47ABBA8E5B54C06321DFE0F18F3C40B56E4A84CC5B54C0144B7763ED8F3C405E868BEBD45B54C037249E5205903C406B4589DEC55B54C0EAEA59D088903C40');
+                out.write("""WITH w AS (INSERT INTO "{0}" ("{1}", "{2}") VALUES ('{3}', '{4}') RETURNING "{5}" AS geo_pk)""".format(geo_table, geo_column, import_column, d.pop("geom")[1:-1], import_name, geo_pk))
 
-INSERT INTO "world" ("recyclezon","pickupday","area_num","color",geom) VALUES ('102.00000000000000000000000000000','WEDNESDAY: WEEKLY','4','TEAL','01060000000100000001030000000100000013000000BB1ECB5E225D54C03B14819EBF883C4039725F05FE5C54C08647B7F2BC883C4051C41701565C54C089915795C7883C4056AA3157345C54C08E7DDC12C9883C403EA94CE9335C54C0D18C1DCB4A883C404C5A685A1F5C54C0FD507CF448883C400ABE16BF1E5C54C0DC3676231F873C407A0FB0884D5C54C0C331699E1E873C40D614BB544B5C54C03B97A43A0A863C40039F73D25E5C54C0C57A676B1B863C40E189CD55765C54C0245F15E3FD853C40EF19265A825C54C0E3AB988209863C40C21C6710945C54C0A5B91DCC2D863C40CC7A5257A65C54C0129CCD79F1853C4058301B04DD5C54C0B5C9CDF8E4853C40C1A370381C5D54C0964EFB30E2853C4013F99B801B5D54C0D7C452FAB0883C4038563B76215D54C067DA49F3B1883C40BB1ECB5E225D54C03B14819EBF883C40');
-"""
+                for i, (k, v) in enumerate(d.items()):
+                    assert k.startswith('"') and k.endswith('"'), line
+                    assert v.startswith("'") and v.endswith("'"), line
+                    out.write(""",\n  i{0} AS (INSERT INTO "{1}" ("{2}", "{3}", "{4}") SELECT '{5}', '{6}', geo_pk from w)""".format(i, keyval_table, keyval_table_key, keyval_table_val, keyval_table_link, k[1:-1], v[1:-1], geo_pk))
+                out.write("\n  SELECT null AS noise;\n")
+
+            else:
+                raise ValueError(line)
+    out.write("COMMIT;\n")
