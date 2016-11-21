@@ -2,10 +2,9 @@
 
 rm -rf data
 mkdir -p data
+mkdir -p cache
 
 database=spatial-info
-table=world
-geometry_table=region
 owner=$(whoami)
 
 sudo -u postgres createuser $owner || true
@@ -21,16 +20,40 @@ function download-and-extract () {
 	description=$1
 	url=$2
 	t=$(mktemp -d)
-	wget -nv -O $t/download.zip $url
+	test -f "cache/$description.zip" || wget -nv -O "cache/$description.zip" $url
+	cp "cache/$description.zip" $t/download.zip
 	(cd $t && unzip download.zip; )
-	./shp2pgkeyval $t/*.shp "data/$description.psql" note_markdown "$description" world region pk regiontags key value region
+	./shp2pgkeyval \
+		$t/*.shp "data/$description.psql" \
+		import id        source "$url" dataset_description "$description" \
+		parcel id import shape \
+		parcel_tags      parcel key value 
+
 	psql -e $database -f "data/$description.psql"
 	rm -rf $t
 }
 
 psql -e $database -f schema.psql
 
+## http://www.cityoforlando.net/publicworks/survey-links/
+## http://cfgis.org/
+## http://www.myregion.org/index.php?submenu=OrangeCounty&src=gendocs&ref=OrangeCounty&category=Collaboration
+## 
+
+psql -d $database -f t
+
 download-and-extract "City of Orlando yard waste pickup days" 'https://data.cityoforlando.net/api/geospatial/w6u7-pfy5?method=export&format=Shapefile'
 download-and-extract "City of Orlando garbage collection days" 'https://data.cityoforlando.net/api/geospatial/2ghq-vezc?method=export&format=Shapefile'
 download-and-extract "City of Orlando recycling collection days" 'https://data.cityoforlando.net/api/geospatial/7gga-penv?method=export&format=Shapefile'
+download-and-extract "Metropolitan-Planning-Organizaion boundaries" 'http://cfgis.org/cfgis/regional/ecfrpc/Regional_Data/Central_Florida_MPO_Boundaries.zip'
+lng=-81.2580419024558   # -81.3721594
+lat=28.476347529487  # 28.5066056
+
+#psql -d $database -c "SELECT GeometryType(region), note_markdown FROM parcel;"
+#psql -d $database -c "SELECT parcel.note_markdown FROM parcel WHERE ST_Covers(region, ST_Point($lng,$lat));"
+#psql -d $database -c "SELECT parcel.note_markdown FROM parcel WHERE ST_Contains(region, ST_Point($lng,$lat));"
+#psql -d $database -c "SELECT parcel.note_markdown FROM parcel WHERE ST_Contains(region, ST_MakePoint($lng,$lat));"
+
+
+psql -d $database -c "SELECT import.dataset_description, parcel_tags.key, parcel_tags.value FROM parcel_tags LEFT JOIN parcel on (parcel_tags.parcel = parcel.id) LEFT JOIN import ON (parcel.import=import.id) WHERE ST_Contains(parcel.region, ST_MakePoint($lng,$lat)) ORDER BY parcel_tags.ordering;"
 

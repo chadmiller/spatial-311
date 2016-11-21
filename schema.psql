@@ -1,25 +1,33 @@
 create table layer (
-	pk serial primary key,
+	id serial primary key,
 	name varchar(50) unique not null
 );
 
 create table import (
-	pk serial primary key,
+	id serial primary key,
+	source varchar(5000),
+	dataset_description varchar(5000),
 	imported_at timestamp not null default 'now',
-	layer integer references layer (pk)
+	reviewed_at timestamp,
+	approved_at timestamp,
+	superceded_at timestamp,
+	layer integer references layer (id)
 );
 
-create table world (
-	pk serial primary key, 
-	note_markdown varchar(5000),
-	import integer references import (pk)
+create table parcel (
+	id serial primary key, 
+	import integer references import (id)
 );
+select AddGeometryColumn('parcel', 'shape', '0', 'MULTIPOLYGON', 2);
 
-create table regiontags (
-	pk serial primary key, 
+create table parcel_tags (
+	id serial primary key, 
 	key text not null, 
 	value text, 
-	region integer references world (pk)
+	make_visible boolean not null default FALSE,
+	from_source boolean not null default TRUE,
+	present_as_numeric boolean not null default FALSE,
+	ordering integer not null default 10000, 
+	parcel integer references parcel (id)
 );	
 
-select AddGeometryColumn('world','region','0','MULTIPOLYGON',2);
