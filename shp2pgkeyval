@@ -7,6 +7,9 @@ import sys
 import io
 import csv
 
+csv.field_size_limit(500 * 1024 * 1024)
+
+
 shapefile, outfile = sys.argv[1:3]
 import_table, import_id,                          source_column, source, description_column, description = sys.argv[3:9]
 parcel_table, parcel_id, parcel_import_fk_column, parcel_column = sys.argv[9:13]
@@ -36,22 +39,19 @@ with open(outfile, "w") as out:
     for line in shpconv.stdout.split("\n"):
         if line.startswith("INSERT "):
             m = re.match(r"""INSERT INTO "tablename" \((.*?)\) VALUES \((.*)\);$""", line)
-            print(line)
             if m:
                 keys = csv.reader(io.StringIO(m.group(1)+"\n"), quotechar='"').__next__()[:]
                 vals = csv.reader(io.StringIO(m.group(2)+"\n"), quotechar="'").__next__()[:]
                 d = dict(zip(keys, vals))
 
                 out.write("""WITH xximport AS (INSERT INTO "{}" ("{}", "{}") VALUES ('{}', '{}') RETURNING "{}" AS pk),\n""".format(import_table, description_column, source_column, escape(description), escape(source), import_id))
-                out.write("""  xxparcel AS (INSERT INTO "{}" ("{}", "{}") SELECT '{}', xximport.pk from xximport RETURNING "{}" AS pk)""".format(parcel_table, parcel_column, parcel_import_fk_column, d.pop("geom")[1:-1], parcel_id))
+                out.write("""  xxparcel AS (INSERT INTO "{}" ("{}", "{}") SELECT '{}'::geometry, xximport.pk from xximport RETURNING "{}" AS pk)""".format(parcel_table, parcel_column, parcel_import_fk_column, d.pop("geom"), parcel_id))
 
                 for i, (k, v) in enumerate(d.items()):
                     #assert k.startswith('"') and k.endswith('"'), (k, line)
                     #assert v.startswith("'") and v.endswith("'"), (v, line)
                     out.write(""",\n    i{} AS (INSERT INTO "{}" ("{}", "{}", "{}") SELECT '{}', '{}', pk from xxparcel)""".format(i, keyval_table, keyval_table_key, keyval_table_val, keyval_parcel_fk_column, k, escape(v)))
                 out.write("\n    SELECT null AS noise;\n")
-
-                break
 
             else:
                 raise ValueError(line)

@@ -1,4 +1,4 @@
-create table layer (
+create table topic (
 	id serial primary key,
 	name varchar(50) unique not null
 );
@@ -6,12 +6,12 @@ create table layer (
 create table import (
 	id serial primary key,
 	source varchar(5000),
-	dataset_description varchar(5000),
+	provenance varchar(5000),
 	imported_at timestamp not null default 'now',
 	reviewed_at timestamp,
 	approved_at timestamp,
 	superceded_at timestamp,
-	layer integer references layer (id)
+	topic integer references topic (id)
 );
 
 create table parcel (
