@@ -4,12 +4,15 @@ import subprocess
 import re
 import psycopg2
 import json
+import contextlib
 import sys
 
 shapefile, db_name, topic_description, import_source, provenance = sys.argv[1:6]
 
-shpconv = subprocess.run(["ogr2ogr", "-f", "GeoJSON", "/dev/stdout", shapefile], stdout=subprocess.PIPE, check=True, universal_newlines=True)
+shpconv = subprocess.run(["ogr2ogr", "-t_srs", "WGS84", "-nlt", "MULTIPOLYGON", "-f", "GeoJSON", "/dev/stdout", shapefile], stdout=subprocess.PIPE, check=True, universal_newlines=True)
 geo = json.loads(shpconv.stdout)
+
+assert list(sorted(geo.keys())) in (["crs", "features", "type"], ["features", "type"]), geo.keys()
 
 assert geo["type"] == "FeatureCollection", geo["type"]
 
@@ -17,14 +20,17 @@ with psycopg2.connect("dbname='{}'".format(db_name)) as conn:
     with conn.cursor() as cur:
 
         cur.execute("""INSERT INTO topic (name) VALUES (%s) ON CONFLICT DO NOTHING;""", (topic_description,))
-        cur.execute("""SELECT id FROM topic WHERE name=%s;""", (topic_description,))
+        cur.execute("""SELECT id from topic WHERE name=%s;""", (topic_description,))
         topic_id, = cur.fetchone()
 
         cur.execute("""UPDATE import SET superceded_at='now' WHERE topic=%s;""", (topic_id,))
-        cur.execute("""INSERT INTO import (source, provenance) SELECT %s, %s RETURNING import.id""", (import_source, provenance))
+        cur.execute("""INSERT INTO import (source, provenance, topic) SELECT %s, %s, %s RETURNING import.id""", (import_source, provenance, topic_id))
         import_id, = cur.fetchone()
 
         for feature in geo["features"]:
+
+            assert list(sorted(feature.keys())) in (["geometry", "properties", "type"],), feature.keys()
+
             assert feature["type"] == "Feature", feature["type"]
             if feature["geometry"]["type"] == "Polygon":
                 polygons = [ feature["geometry"]["coordinates"] ]
@@ -33,7 +39,7 @@ with psycopg2.connect("dbname='{}'".format(db_name)) as conn:
             else:
                 assert False, feature["geometry"]["type"]
 
-            cur.execute("""INSERT INTO parcel (shape, import) SELECT ST_GeomFromGeoJSON(%s), %s RETURNING parcel.id""", (json.dumps(dict(type="MultiPolygon", coordinates=polygons,  )), import_id))  # crs=coordrefsys
+            cur.execute("""INSERT INTO parcel (shape, import) SELECT ST_GeomFromGeoJSON(%s), %s RETURNING parcel.id""", (json.dumps(dict(type="MultiPolygon", coordinates=polygons,)), import_id))
             parcel_id, = cur.fetchone()
 
             for k, v in feature["properties"].items():

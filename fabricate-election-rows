@@ -14,14 +14,18 @@ topic_name = "Elections in Florida, {}"
 
 _, db_name, = sys.argv
 
+def curex(cursor, command, args):
+    print(command % args)
+    cur.execute(command, args)
+
 with psycopg2.connect("dbname='{}'".format(db_name)) as conn:
     with conn.cursor() as cur:
         for year in (this_year, last_year, next_year):
             html_doc = requests.post("http://dos.elections.myflorida.com/calendar/", data={ "county":"ALL", "year":str(year) })
 
-            cur.execute("""INSERT INTO topic (name) VALUES (%s) ON CONFLICT DO NOTHING;""", (topic_name.format(year),))
-            cur.execute("""UPDATE import SET superceded_at='now' WHERE topic IN (SELECT topic.id FROM topic WHERE name = %s);""", (topic_name.format(year),))
-            cur.execute("""INSERT INTO import (source, provenance) SELECT %s, %s RETURNING import.id""", ('http://dos.elections.myflorida.com/calendar/##year='+str(year), html_doc.headers['date']))
+            curex(cur, """INSERT INTO topic (name) VALUES (%s) ON CONFLICT DO NOTHING;""", (topic_name.format(year),))
+            curex(cur, """UPDATE import SET superceded_at='now' WHERE topic IN (SELECT topic.id FROM topic WHERE name = %s);""", (topic_name.format(year),))
+            curex(cur, """INSERT INTO import (source, provenance, topic) SELECT %s, %s, topic.id FROM topic WHERE topic.name=%s RETURNING import.id""", ('http://dos.elections.myflorida.com/calendar/##year='+str(year), html_doc.headers['date'], topic_name.format(year),))
             import_id, = cur.fetchone()
 
             for month, day, jurisdiction, election_type, county in re.findall(r"""(?mx)<tr> \s+ <td> \s* (\d+)/(\d+)/\d\d \s* </td> \s* <td> \s* ([^<]*?) \s* </td> \s* <td> \s* ([^<]*?) \s* </font> \s* </td> \s* <td> \s* ([^<]*?) \s* </td> \s* </tr>""", html_doc.text):
@@ -47,11 +51,13 @@ with psycopg2.connect("dbname='{}'".format(db_name)) as conn:
 
                 jurisdiction = re.sub("^(?:City of |Town of )?(.*?)( City)?", r"\1", jurisdiction or county)
 
+                county = re.sub(r"[ \.]", r"", county)
+
                 if jurisdiction:
-                    cur.execute("""INSERT INTO parcel (import, shape) SELECT %s, p.shape FROM parcel_tags LEFT JOIN parcel AS p ON (parcel_tags.parcel=p.id) LEFT JOIN import i on (i.id=p.import) left join topic on i.topic=topic.id WHERE i.superceded_at IS NULL AND parcel_tags.key='NAME' AND (LOWER(parcel_tags.value)=LOWER(%s) OR LOWER(parcel_tags.value)=LOWER(%s || ' City')) AND topic.name=%s LIMIT 1 RETURNING parcel.id""", (import_id, jurisdiction, jurisdiction, "Florida cities"))
+                    curex(cur, """INSERT INTO parcel (import, shape) SELECT %s, p.shape FROM parcel_tags LEFT JOIN parcel AS p ON (parcel_tags.parcel=p.id) LEFT JOIN import i on (i.id=p.import) left join topic on i.topic=topic.id WHERE i.superceded_at IS NULL AND parcel_tags.key='NAME' AND (LOWER(parcel_tags.value)=LOWER(%s) OR LOWER(parcel_tags.value)=LOWER(%s || ' City')) AND topic.name=%s LIMIT 1 RETURNING parcel.id""", (import_id, jurisdiction, jurisdiction, "Florida cities"))
 
                 if not jurisdiction or cur.rowcount == 0:
-                    cur.execute("""INSERT INTO parcel (import, shape) SELECT %s, p.shape FROM parcel_tags LEFT JOIN parcel AS p ON (parcel_tags.parcel=p.id) LEFT JOIN import i on (i.id=p.import) left join topic on i.topic=topic.id WHERE i.superceded_at IS NULL AND parcel_tags.key='NAME' AND LOWER(parcel_tags.value)=LOWER(%s) AND topic.name=%s LIMIT 1 RETURNING parcel.id""", (import_id, county, "Florida counties"))
+                    curex(cur, """INSERT INTO parcel (import, shape) SELECT %s, p.shape FROM parcel_tags LEFT JOIN parcel AS p ON (parcel_tags.parcel=p.id) LEFT JOIN import i on (i.id=p.import) left join topic on i.topic=topic.id WHERE i.superceded_at IS NULL AND parcel_tags.key='NAME' AND LOWER(parcel_tags.value)=LOWER(%s) AND topic.name=%s LIMIT 1 RETURNING parcel.id""", (import_id, county, "Florida counties"))
 
                 row = cur.fetchone()
                 if not row:
@@ -60,5 +66,6 @@ with psycopg2.connect("dbname='{}'".format(db_name)) as conn:
                 else:
                     parcel_id, = row
 
-                cur.execute("""INSERT INTO parcel_tags (parcel, key, value) VALUES (%s, 'Voting day', %s)""", (parcel_id, when.strftime("%Y-%m-%d"),))
+                curex(cur, """INSERT INTO parcel_tags (parcel, key, value) VALUES (%s, 'Voting day', %s)""", (parcel_id, when.strftime("%Y-%m-%d"),))
 
+                break

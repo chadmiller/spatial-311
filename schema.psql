@@ -6,17 +6,17 @@ create table topic (
 create table import (
 	id serial primary key,
 	source varchar(5000),
-	provenance varchar(5000),
+	provenance varchar(5000) not null,
 	imported_at timestamp not null default 'now',
 	reviewed_at timestamp,
 	approved_at timestamp,
 	superceded_at timestamp,
-	topic integer references topic (id)
+	topic integer references topic (id) not null
 );
 
 create table parcel (
 	id serial primary key, 
-	import integer references import (id)
+	import integer references import (id) not null
 );
 select AddGeometryColumn('parcel', 'shape', '0', 'MULTIPOLYGON', 2);
 
@@ -28,6 +28,6 @@ create table parcel_tags (
 	from_source boolean not null default TRUE,
 	present_as_numeric boolean not null default FALSE,
 	ordering integer not null default 10000, 
-	parcel integer references parcel (id)
+	parcel integer references parcel (id) not null
 );	
 
