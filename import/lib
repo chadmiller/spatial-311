@@ -1,0 +1,42 @@
+function download-and-extract () {
+	description=$1
+	url=$2
+	t=$(mktemp -d)
+	test -f "cache/$description" || wget -nv -O "cache/$description" $url
+	cp "cache/$description" "$t/download"
+	bestfile=$t/download
+	sniffed=$(file -b "$t/download" |sed -r -e "s,length [0-9]+,,")
+	if test "$sniffed" = "Zip archive data, at least v2.0 to extract"; then
+		mv "$t/download" "$t/download".zip
+		( cd $t && unzip download.zip >/dev/null; )
+		bestfile=$(find "$t" \( -type f  -name \*.shp \) -o \( -type d -a -name \*.gdb \) |head -1)
+		if test -z "$bestfile"; then
+			echo "No useful file found in $t"
+			exit 1
+		fi
+		sniffed=$(file -b "$bestfile" |sed -r -e "s, length [0-9]+,,")
+	fi
+
+	if test "$sniffed" = "directory"; then
+		gdb_t=$t
+		t=$(mktemp -d)
+
+		ogr2ogr -f ESRI\ Shapefile "$t/shapefile" "$bestfile"
+		rm -rf "$gdb_t"
+		bestfile=$(find "$t" \( -type f  -name \*.shp \) -o \( -type d -a -name \*.gdb \) |head -1)
+		sniffed=$(file -b "$bestfile" |sed -r -e "s, length [0-9]+,,")
+	fi
+
+	case "$sniffed" in
+		"ESRI Shapefile version 1000 type Polygon")
+			./shpimport "$bestfile" "$dbname" "$description" "$url" "$(date -u)"
+			;;
+		"directory")
+			echo "We should have unwrapped a GDB to create shapefiles by now."
+			;;
+		*)
+			echo "file $bestfile is unknown type $sniffed";
+			;;
+	esac
+	rm -rf $t
+}
