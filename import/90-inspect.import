@@ -6,7 +6,7 @@ lat=28.476347529487  # 28.5066056
 #psql -d $dbname -c "SELECT parcel.id FROM parcel WHERE ST_Contains(shape, ST_Point($lng,$lat));" 
 #psql -d $dbname -c "SELECT parcel.note_markdown FROM parcel WHERE ST_Contains(region, ST_MakePoint($lng,$lat));"
 
-psql -b -d $dbname -c "SELECT topic.name, parcel_tags.key, parcel_tags.value FROM parcel_tags LEFT JOIN parcel on (parcel_tags.parcel = parcel.id) LEFT JOIN import ON (parcel.import=import.id) LEFT JOIN topic on (topic.id=import.topic) WHERE ST_Contains(parcel.shape, ST_MakePoint($lng,$lat)) ORDER BY parcel_tags.ordering, topic.name;"
+psql -b -d $dbname -c "SELECT topic.name, parcel_tags.key, parcel_tags.value FROM parcel_tags LEFT JOIN parcel on (parcel_tags.parcel = parcel.id) LEFT JOIN import ON (parcel.import=import.id) LEFT JOIN topic on (topic.id=import.topic) WHERE ST_Contains(parcel.shape, ST_MakePoint($lng,$lat)) ORDER BY topic.name, parcel_tags.ordering, parcel_tags.key;" |cat
 
 #psql -b -d $dbname -c "select distinct topic.name, ST_SRID(parcel.shape) from parcel left join import on (parcel.import=import.id) left join topic on (topic.id=import.topic) order by topic.name;"
 
