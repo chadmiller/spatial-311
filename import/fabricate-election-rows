@@ -68,4 +68,3 @@ with psycopg2.connect("dbname='{}'".format(db_name)) as conn:
 
                 curex(cur, """INSERT INTO parcel_tags (parcel, key, value) VALUES (%s, 'Voting day', %s)""", (parcel_id, when.strftime("%Y-%m-%d"),))
 
-                break
