@@ -1,0 +1,5 @@
+#!/bin/sh
+
+. env/bin/activate
+
+python3 syp/manage.py help

@@ -1,0 +1,84 @@
+<html>
+	<head>
+		<link rel="stylesheet" href="/static/leaflet.css" />
+		<link rel="stylesheet" href="/static/L.Control.MapCenterCoord.min.css" />
+		<script src="/static/leaflet.js"></script>
+		<script src="/static/coffee-script.js"></script>
+		<script src="/static/L.Control.MapCenterCoord.min.js"></script>
+		<style>
+html, body, #mapid { border: 0; padding 0; }
+#dumbclientinstruction { margin: 3em; font-size: xx-large; text-align: center;}
+#mapid { height: 50vh; }
+#tags { display: flex; flex-flow: row wrap; justify-content: space-around; margin: 1ex; }
+#tags div h1 { font-size: 1.2em; }
+#tags div p { font-size: 1em; }
+#tags div { max-width: 30ex; margin: 1ex; }
+#tags div p.unimportant { display: none; }
+#tags div:hover p.unimportant { display: inherit; }
+body.leaflet-dragging #tags { opacity: 0.3; }
+		</style>
+	</head>
+	<body>
+		<div id="mapid"></div>
+		<aside id="dumbclientinstruction">Please move the map to center where you are.</aside>
+		<div id="tags"></div>
+	</body>
+	<script type="text/coffeescript">
+		map = L.map "mapid"
+		mapUrl = "https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png"
+		#mapUrl = "http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg"
+		mapAttrib = "Map data © <a href=\"http://openstreetmap.org\">OpenStreetMap</a> contributors"
+		layer = new L.TileLayer mapUrl,
+			minZoom: 7
+			maxZoom: 17
+			attribution: mapAttrib
+
+		map.fitBounds [[27.401032,-83.169219], [29.669146,-79.727783]]
+		map.addLayer layer
+
+		L.control.mapCenterCoord().addTo map
+
+		info_container = document.getElementById "tags"
+
+		process_location = (lat, lng) ->
+			dci = document.getElementById "dumbclientinstruction"
+			if dci
+				dci.parentNode.removeChild dci
+
+			xhr = new XMLHttpRequest
+			xhr.open 'GET', '/api/get-point-info?lat=' + lat + "&lng=" + lng, true
+			xhr.onload = (e) ->
+				if this.readyState == 4 and this.status == 200
+					result = JSON.parse this.responseText
+
+					while info_container.lastChild
+						info_container.removeChild info_container.lastChild
+
+					for [group, grouped] in result.data
+						section = document.createElement "div"
+						info_container.appendChild section
+						header = document.createElement "h1"
+						header.appendChild document.createTextNode group
+						section.appendChild header
+
+						for [_, ident, k, v, visible] in grouped
+							descr = document.createElement "p"
+							if not visible
+								descr.setAttribute "class", "unimportant"
+							descr.appendChild document.createTextNode "#{k} = #{v}"
+							section.appendChild descr
+
+			xhr.send()
+
+		if navigator.geolocation
+			navigator.geolocation.getCurrentPosition (position) ->
+				map.setZoom 17
+				map.panTo [position.coords.latitude, position.coords.longitude]
+				process_location position.coords.latitude, position.coords.longitude
+
+		map.on 'moveend', (e) ->
+			latLng = map.getCenter()
+			process_location latLng.lat, latLng.lng
+
+	</script>
+</html>

@@ -1,0 +1,8 @@
+. lib
+
+download-and-extract "Florida legislature districting, from Fl Senate" 'http://www.flsenate.gov/PublishedContent/Session/Redistricting/Plans/SC14-1905/SC14-1905_shp.zip'
+show-tags "Florida legislature districting, from Fl Senate" DISTRICT
+download-and-extract "Florida legislature districting, lower, from USCB" https://www2.census.gov/geo/tiger/TIGER2016/SLDL/tl_2016_12_sldl.zip
+show-tags "Florida legislature districting, lower, from USCB" NAMELSAD
+download-and-extract "Florida legislature districting, upper, from USCB" https://www2.census.gov/geo/tiger/TIGER2016/SLDU/tl_2016_12_sldu.zip
+show-tags "Florida legislature districting, upper, from USCB" NAMELSAD
