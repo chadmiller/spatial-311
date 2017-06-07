@@ -31,6 +31,10 @@ with psycopg2.connect("dbname='{}'".format(db_name)) as conn:
 
             assert list(sorted(feature.keys())) in (["geometry", "properties", "type"],), feature.keys()
 
+            assert "geometry" in feature, geo
+            assert feature["geometry"], geo
+            assert "type" in feature["geometry"], geo
+
             assert feature["type"] == "Feature", feature["type"]
             if feature["geometry"]["type"] == "Polygon":
                 polygons = [ feature["geometry"]["coordinates"] ]

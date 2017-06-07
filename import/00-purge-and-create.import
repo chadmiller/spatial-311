@@ -1,8 +1,8 @@
-sudo -u postgres createuser $owner || true
-sudo -u postgres dropdb $dbname || true
-sudo -u postgres createdb -O $owner $dbname
+sudo -u postgres chronic createuser $owner || true
+sudo -u postgres chronic dropdb $dbname || true
+sudo -u postgres chronic createdb -O $owner $dbname
 
-sudo -u postgres psql -b -d $dbname -c "CREATE EXTENSION postgis;"
-sudo -u postgres psql -b -d $dbname -c "CREATE EXTENSION postgis_topology;"
-sudo -u postgres psql -b -d $dbname -c "CREATE EXTENSION address_standardizer;"
-sudo -u postgres psql -b -d $dbname -c "ALTER SCHEMA topology OWNER TO $owner;"
+sudo -u postgres chronic psql -b -d $dbname -c "CREATE EXTENSION postgis;"
+sudo -u postgres chronic psql -b -d $dbname -c "CREATE EXTENSION postgis_topology;"
+sudo -u postgres chronic psql -b -d $dbname -c "CREATE EXTENSION address_standardizer;"
+sudo -u postgres chronic psql -b -d $dbname -c "ALTER SCHEMA topology OWNER TO $owner;"

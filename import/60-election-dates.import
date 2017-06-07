@@ -1,2 +1,6 @@
 . lib
 ./fabricate-election-rows "$dbname"
+
+seq 2015 2030 |while read year; do
+show-tags "Elections in Florida, $year" "Voting day"
+done

@@ -1,15 +1,28 @@
+county_list="Alachua Baker Bay Bradford Brevard Broward Calhoun Charlotte Citrus Clay Collier Columbia Dade Desoto Dixie Duval Escambia Flagler Franklin Gadsden Gilchrist Glades Gulf Hamilton Hardee Hendry Hernando Highlands Hillsborough Holmes Indian_River Jackson Jefferson Lafayette Lake Lee Leon Levy Liberty Madison Manatee Marion Martin Monroe Nassau Okaloosa Okeechobee Orange Osceola Palm_Beach Pasco Pinellas Polk Putnam Santa_Rosa Sarasota Seminole St_Johns St_Lucie Sumter Suwannee Taylor Union Volusia Wakulla Walton Washington"
+
+function show-tags () {
+	description="$1"
+	shift
+	for tag in "$@"; do
+		psql -b -d $dbname -c "UPDATE parcel_tags set make_visible=TRUE WHERE parcel_tags.id in (SELECT parcel_tags.id from parcel_tags left join parcel on (parcel_tags.parcel=parcel.id) left join import on (parcel.import=import.id) left join topic on (import.topic=topic.id) where parcel_tags.key='$tag' AND topic.name='$description');"
+	done
+}
+
+
 function download-and-extract () {
 	description=$1
 	url=$2
 	t=$(mktemp -d)
+	set -x
 	test -f "cache/$description" || wget -nv -O "cache/$description" $url
 	cp "cache/$description" "$t/download"
 	bestfile=$t/download
-	sniffed=$(file -b "$t/download" |sed -r -e "s,length [0-9]+,,")
-	if test "$sniffed" = "Zip archive data, at least v2.0 to extract"; then
+	sniffed=$(file -b "$t/download" |sed -r -e "s,length [0-9]+,," -e "s#, at least v[12].0 to extract##")
+	echo "$sniffed"
+	if test "$sniffed" = "Zip archive data"; then
 		mv "$t/download" "$t/download".zip
-		( cd $t && unzip download.zip >/dev/null; )
-		bestfile=$(find "$t" \( -type f  -name \*.shp \) -o \( -type d -a -name \*.gdb \) |head -1)
+		( cd $t && chronic unzip download.zip ; )
+		bestfile=$(find "$t" \( -type f  -name \*.shp \) -o \( -type d -a -name \*.gdb \)  |head -1)
 		if test -z "$bestfile"; then
 			echo "No useful file found in $t"
 			exit 1
@@ -21,21 +34,34 @@ function download-and-extract () {
 		gdb_t=$t
 		t=$(mktemp -d)
 
-		ogr2ogr -f ESRI\ Shapefile "$t/shapefile" "$bestfile"
+		ogr2ogr -f ESRI\ Shapefile "$t/shapefile" "$bestfile" 2>/dev/null
 		rm -rf "$gdb_t"
 		bestfile=$(find "$t" \( -type f  -name \*.shp \) -o \( -type d -a -name \*.gdb \) |head -1)
-		sniffed=$(file -b "$bestfile" |sed -r -e "s, length [0-9]+,,")
+		sniffed=$(file -b "$t/download" |sed -r -e "s,length [0-9]+,," -e "s#, at least v[12].0 to extract##")
 	fi
+
+#	if test "$sniffed" = "directory"; then
+#		gdb_t=$t
+#		t=$(mktemp -d)
+#
+#		ogr2ogr -t_srs WGS84 -nlt MULTIPOLYGON -f GeoJSON "$t/geojson" "$bestfile"
+#		rm -rf "$gdb_t"
+#		bestfile=$(find "$t" \( -type f  -name \*.shp \) -o \( -type d -a -name \*.gdb \) -o \( -type f -name geojson \) |head -1)
+#		sniffed=$(file -b "$bestfile" |sed -r -e "s, length [0-9]+,,")
+#	fi
 
 	case "$sniffed" in
 		"ESRI Shapefile version 1000 type Polygon")
 			./shpimport "$bestfile" "$dbname" "$description" "$url" "$(date -u)"
 			;;
+		"XML 1.0 document, ASCII text,")
+			./shpimport "$bestfile" "$dbname" "$description" "$url" "$(date -u)"
+			;;
 		"directory")
-			echo "We should have unwrapped a GDB to create shapefiles by now."
+			./shpimport "$bestfile" "$dbname" "$description" "$url" "$(date -u)"
 			;;
 		*)
-			echo "file $bestfile is unknown type $sniffed";
+			echo "Failed to import! unknown type $sniffed, for $description";
 			;;
 	esac
 	rm -rf $t

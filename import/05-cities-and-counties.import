@@ -1,3 +1,7 @@
 . lib
+
 download-and-extract "Florida cities" 'https://ftp.fgdl.org/pub/state/par_citylm_2015.zip'
+show-tags "Florida cities" DESCRIPT TAXAUTHCD
+
 download-and-extract "Florida counties" 'ftp://ftp.fgdl.org/pub/state/county_sep15.zip'
+show-tags "Florida counties" NAME

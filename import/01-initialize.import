@@ -1,1 +1,1 @@
-psql -b -e $dbname -f schema.psql
+chronic psql -b -e $dbname -f schema.psql

@@ -1,3 +1,4 @@
 . lib
 
 download-and-extract "Orange County subdivisions" http://www2.census.gov/geo/tiger/TIGER2010/COUSUB/2010/tl_2010_12095_cousub10.zip
+show-tags "Orange County subdivisions" NAMELSAD10

@@ -1,3 +1,4 @@
 . lib
 
 download-and-extract "School districts" http://www2.census.gov/geo/tiger/TIGER2010/UNSD/2010/tl_2010_12_unsd10.zip
+show-tags "School districts" NAME10 LOGRADE10 HIGRADE10

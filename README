@@ -1,5 +1,10 @@
 
-http://collinsinstitute.fsu.edu/sites/collinsinstitute.fsu.edu/files/Special%20Districts%20exec%20summary%207%2003%2014.pdf
+Some dependencies:
 
+Assumes you're using on Ubuntu.
 
+Install packages:
+	- gdal-bin
+	- postgresql-9.5-postgis-2.2
 
+Maybe more.

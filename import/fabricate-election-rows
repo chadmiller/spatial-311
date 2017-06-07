@@ -15,7 +15,6 @@ topic_name = "Elections in Florida, {}"
 _, db_name, = sys.argv
 
 def curex(cursor, command, args):
-    print(command % args)
     cur.execute(command, args)
 
 with psycopg2.connect("dbname='{}'".format(db_name)) as conn:

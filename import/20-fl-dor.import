@@ -1,0 +1,7 @@
+. lib
+
+for county in $county_list; do
+	test "$county" == "Broward" && continue
+	download-and-extract "DOR $county" ftp://sdrftp03.dor.state.fl.us/Map%20Data/00_2016/${county}_pin.zip || true
+done
+

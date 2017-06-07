@@ -1,8 +1,0 @@
-#!/bin/bash -eu
-
-cd import
-mkdir -p cache
-
-for f in ??-*.import; do
-	env dbname=spatial-info owner=$(whoami) bash -eu $f || { echo "Aborting."; exit 1; }
-done

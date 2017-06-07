@@ -8,11 +8,11 @@
 		<style>
 html, body, #mapid { border: 0; padding 0; }
 #dumbclientinstruction { margin: 3em; font-size: xx-large; text-align: center;}
-#mapid { height: 50vh; }
+#mapid { height: 40vh; }
 #tags { display: flex; flex-flow: row wrap; justify-content: space-around; margin: 1ex; }
 #tags div h1 { font-size: 1.2em; }
+#tags div { width: 30ex; margin: 1ex; }
 #tags div p { font-size: 1em; }
-#tags div { max-width: 30ex; margin: 1ex; }
 #tags div p.unimportant { display: none; }
 #tags div:hover p.unimportant { display: inherit; }
 body.leaflet-dragging #tags { opacity: 0.3; }
@@ -75,6 +75,7 @@ body.leaflet-dragging #tags { opacity: 0.3; }
 				map.setZoom 17
 				map.panTo [position.coords.latitude, position.coords.longitude]
 				process_location position.coords.latitude, position.coords.longitude
+				// TODO: Hide the map. No need to show it now. Also give a way to re-position.
 
 		map.on 'moveend', (e) ->
 			latLng = map.getCenter()

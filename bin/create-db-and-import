@@ -5,5 +5,5 @@ mkdir -p cache
 
 for f in ??-*.import; do
 	echo "$f"
-	env dbname=spatial-info owner=$(whoami) bash -eu $f || { echo "Aborting."; exit 1; }
+	env dbname=spatial-info owner=$(whoami) bash -eu $f || { echo "Aborting $f."; exit 1; }
 done

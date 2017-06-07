@@ -1,4 +1,7 @@
 . lib
 download-and-extract "City of Orlando yard waste pickup days" 'https://data.cityoforlando.net/api/geospatial/w6u7-pfy5?method=export&format=Shapefile'
+show-tags "City of Orlando yard waste pickup days" collday
 download-and-extract "City of Orlando garbage collection days" 'https://data.cityoforlando.net/api/geospatial/2ghq-vezc?method=export&format=Shapefile'
+show-tags "City of Orlando garbage collection days" garbageday
 download-and-extract "City of Orlando recycling collection days" 'https://data.cityoforlando.net/api/geospatial/7gga-penv?method=export&format=Shapefile'
+show-tags "City of Orlando recycling collection days" pickupday

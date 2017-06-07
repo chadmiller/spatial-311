@@ -1,0 +1,7 @@
+. lib
+
+download-and-extract "Miami Recycling Zones" http://gis.mdc.opendata.arcgis.com/datasets/47f93933db224846a8b8670ac77c6051_1.zip
+show-tags "Miami Recycling Zones" WEEKDAY ISRECYCLE UPDATED
+
+download-and-extract "Miami Garbage Pickup" http://gis.mdc.opendata.arcgis.com/datasets/15574518e8cc41c7ae700c3a7afccb8a_3.zip
+show-tags "Miami Garbage Pickup" COLLDAY TYPE WCSAREA

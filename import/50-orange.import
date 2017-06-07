@@ -1,0 +1,8 @@
+. lib
+
+download-and-extract "Orange Co Flood Zones" ftp://ftp.onetgov.net/divisions/Infomap/pub/GIS_Downloads/FTP%20Shapefiles/Fema%20Flood%20Zones.zip
+show-tags "Orange Co Flood Zones" ZONE_SUBTY
+
+download-and-extract "Orange Co Airport Noise" ftp://ftp.onetgov.net/divisions/Infomap/pub/GIS_Downloads/FTP%20Shapefiles/Airport%20Noise%20Contours.zip
+show-tags "Orange Co Airport Noise" ZONE_
+
